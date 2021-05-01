@@ -1,0 +1,39 @@
+service: sls-s3-python
+frameworkVersion: '2'
+
+custom:
+  bucket: vpetrosiants-for-lambda
+
+provider:
+  name: aws
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  stage: dev
+  region: us-west-2
+  memorySize: 128
+  environment:
+    QUEUE_URL: { Ref: S3Queue }
+    REGION: ${self:provider.region}
+    S3: ${self:custom.bucket}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "s3:*"
+      Resource: "arn:aws:s3:::${self:custom.bucket}/*"
+    - Effect: Allow
+      Action:
+        - "sqs:*"
+      Resource: arn:aws:sqs:*:*:S3Queue
+
+functions:
+  process-s3-to-sqs:
+    handler: handler.lambda_handler
+    events:
+      - s3: ${self:custom.bucket}
+
+resources:
+  Resources:
+    S3Queue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "S3Queue"
